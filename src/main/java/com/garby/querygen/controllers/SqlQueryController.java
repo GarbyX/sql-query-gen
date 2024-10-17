@@ -3,7 +3,9 @@ package com.garby.querygen.controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.garby.querygen.models.QueryRequest;
-import com.garby.querygen.models.Relation;
+import com.garby.querygen.services.QueryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,12 @@ public class SqlQueryController {
 
     private static final Logger logger = LoggerFactory.getLogger(SqlQueryController.class);
     private final ObjectMapper objectMapper = new ObjectMapper(); // Create an ObjectMapper instance
+
+    private final QueryService queryService;
+
+    public SqlQueryController(QueryService queryService) {
+        this.queryService = queryService;
+    }
 
     @PostMapping("/api/v1/sqlquery")
     public ResponseEntity<?> handleQuery(@RequestBody QueryRequest queryRequest) {
@@ -74,7 +82,7 @@ public class SqlQueryController {
             }
 
             // Build SQL query
-            String sqlQuery = buildSqlQuery(queryRequest);
+            String sqlQuery = queryService.buildSqlQuery(queryRequest);
             // logger.info("Generated SQL Query: {}", sqlQuery); // Log the generated SQL query
             logger.info("Generated SQL Query:\n{}", sqlQuery.replace(", ", ",\n  ")); // Log the generated SQL query with formatting
 
@@ -88,54 +96,14 @@ public class SqlQueryController {
         }
     }
 
-    private String buildSqlQuery(QueryRequest queryRequest) {
-        StringBuilder sql = new StringBuilder();
-
-        // Start the SELECT statement
-        sql.append("SELECT ");
-
-        // Append fields from relations
-        boolean firstField = true;
-        for (Relation relation : queryRequest.getRelations()) {
-            if (!firstField) {
-                sql.append(", ");
-            }
-            sql.append(String.join(", ", relation.getFields()));
-            firstField = false;
-        }
-
-        sql.append(" FROM customer ");
-
-        // Handle joins
-        for (Relation relation : queryRequest.getRelations()) {
-            if ("left join".equalsIgnoreCase(relation.getJoinType())) {
-                sql.append("LEFT JOIN ").append(relation.getTable()).append(" ON customer.userId = ").append(relation.getTable()).append(".userId ");
-            } else if ("inner join".equalsIgnoreCase(relation.getJoinType())) {
-                sql.append("INNER JOIN ").append(relation.getTable()).append(" ON customer.userId = ").append(relation.getTable()).append(".userId ");
-            }
-        }
-
-        // Append WHERE clause if filters exist
-        if (queryRequest.getFilters() != null && !queryRequest.getFilters().isEmpty()) {
-            sql.append("WHERE ");
-            sql.append(String.join(" AND ", queryRequest.getFilters()));
-        }
-
-        // Append ORDER BY clause
-        if (queryRequest.getOrderBy() != null && !queryRequest.getOrderBy().isEmpty()) {
-            sql.append(" ORDER BY ").append(String.join(", ", queryRequest.getOrderBy()));
-        }
-
-        // Append GROUP BY clause if needed
-        if (queryRequest.getGroupBy() != null && !queryRequest.getGroupBy().isEmpty()) {
-            sql.append(" GROUP BY ").append(String.join(", ", queryRequest.getGroupBy()));
-        }
-
-        return sql.toString();
+    @Operation(summary = "Process a SQL query request",
+            description = "Processes a SQL query request with options for table names and fields.",
+            responses = {@ApiResponse(responseCode = "200", description = "Query processed successfully")})
+    @PostMapping("/api/v1/process")
+    public ResponseEntity<String> processQuery(@RequestBody QueryRequest queryRequest) {
+        String sqlQuery = queryService.buildSqlQuery(queryRequest);  // Custom method to build SQL query
+        return ResponseEntity.ok(sqlQuery);  // Return the actual query instead of a success message
     }
-
-
-
 
 
 
