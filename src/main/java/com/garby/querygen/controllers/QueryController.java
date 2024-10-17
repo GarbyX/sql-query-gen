@@ -31,7 +31,13 @@ public class QueryController {
     )
     @PostMapping("/generate")
     public ResponseEntity<Map<String, String>> generateSQLQuery(@RequestBody QueryRequest request) {
-        // SQL Query generation logic based on the request body
+        // Log the request object
+        System.out.println("Received request: " + request);
+
+        if (request.getRelations() == null || request.getRelations().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Relations cannot be null or empty"));
+        }  // SQL Query generation logic based on the request body
+
         String sqlQuery = generateSQLFromRequest(request);
 
         // Response map to hold the result

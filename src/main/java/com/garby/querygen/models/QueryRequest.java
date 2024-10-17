@@ -13,7 +13,7 @@ public class QueryRequest {
 
     // Constructor
     public QueryRequest() {
-        // Default constructor
+        // Default constructor. Optionally initialize other fields
     }
 
     // Getters and Setters
@@ -27,7 +27,7 @@ public class QueryRequest {
     }
 
     public List<Relation> getRelations() {
-        return relations;
+        return relations;    // This will return an empty list instead of null
     }
 
     public void setRelations(List<Relation> relations) {
