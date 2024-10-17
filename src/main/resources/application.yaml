@@ -1,0 +1,17 @@
+####################################################
+#            Application Configuration             #
+####################################################
+
+spring:
+  application:
+    name: sql-query-gen-service
+  profiles:
+    active: dev
+server:
+  port: 8025
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
