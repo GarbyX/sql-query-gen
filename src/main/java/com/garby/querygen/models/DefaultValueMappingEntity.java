@@ -1,21 +1,12 @@
 package com.garby.querygen.models;
 
 public class DefaultValueMappingEntity {
-
     private String sourceTable;
     private String sourceField;
     private String targetTable;
     private String targetField;
 
-    public DefaultValueMappingEntity() {
-    }
-
-    public DefaultValueMappingEntity(String sourceTable, String sourceField, String targetTable, String targetField) {
-        this.sourceTable = sourceTable;
-        this.sourceField = sourceField;
-        this.targetTable = targetTable;
-        this.targetField = targetField;
-    }
+    // Getters and Setters
 
     public String getSourceTable() {
         return sourceTable;
