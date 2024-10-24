@@ -3,8 +3,7 @@ package com.garby.querygen.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.garby.querygen.models.DefaultValueMappingEntity;
-import com.garby.querygen.models.QueryRequestNew;
+import com.garby.querygen.models.*;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,6 +128,115 @@ public class SqlQueryService {
         Logger logger = LoggerFactory.getLogger(SqlQueryService.class);
         logger.info("Generated SQL query:\n{}", sqlQuery);
     }
+
+    // -------------- ported code -------------- //
+
+    public String generateSQLFromRequest(QueryRequest request) {
+        // Base SQL Query
+        StringBuilder queryBuilder = new StringBuilder();
+        queryBuilder.append("SELECT ");
+        // Handle SELECT fields
+        request.getRelations().forEach(relation -> {
+            relation.getFields().forEach(field -> queryBuilder.append(relation.getTable()).append(".").append(field).append(", "));
+        });
+        // Remove last comma and space
+        queryBuilder.setLength(queryBuilder.length() - 2);
+        // Handle FROM and JOIN clauses
+        queryBuilder.append(" FROM ").append(request.getRelations().get(0).getTable()).append(" ");
+        for (int i = 1; i < request.getRelations().size(); i++) {
+            Relation relation = (Relation) request.getRelations().get(i);
+            queryBuilder.append(relation.getJoinType().toUpperCase())
+                    .append(" ")
+                    .append(relation.getTable())
+                    .append(" ON ")
+                    .append(request.getRelations().get(0).getTable())
+                    .append(".userId = ")
+                    .append(relation.getTable())
+                    .append(".userId ");
+        }
+
+        // Handle WHERE clause
+        queryBuilder.append("WHERE ");
+        request.getFilters().forEach(filter -> queryBuilder.append(filter).append(" IS NOT NULL AND "));
+        // Remove last 'AND'
+        queryBuilder.setLength(queryBuilder.length() - 4);
+        // Handle ORDER BY clause
+        queryBuilder.append(" ORDER BY ");
+        request.getOrderBy().forEach(orderField -> queryBuilder.append(orderField).append(", "));
+        // Remove last comma
+        queryBuilder.setLength(queryBuilder.length() - 2);
+        return queryBuilder.toString();
+    }
+
+
+
+    public String generateSqlQuery(QueryRequestNew queryRequest) {
+        StringBuilder sql = new StringBuilder();
+
+        // Start building the SQL query
+        sql.append("SELECT ");
+
+        // Add fields from relations
+        boolean firstField = true;
+        for (QueryRequestNew.Relation relation : queryRequest.getRequestBody().getRelations()) {
+            if (!firstField) {
+                sql.append(", ");
+            }
+            sql.append(String.join(", ", relation.getFields()));
+            firstField = false;
+        }
+
+        // FROM clause with the first table
+        sql.append(" FROM ").append(queryRequest.getRequestBody().getRelations().get(0).getTable());
+
+        // Handle optional JOIN clauses
+        for (int i = 1; i < queryRequest.getRequestBody().getRelations().size(); i++) {
+            QueryRequestNew.Relation relation = queryRequest.getRequestBody().getRelations().get(i);
+            if (relation.getJoinType() != null && !relation.getJoinType().isEmpty()) {
+                sql.append(" ").append(relation.getJoinType()).append(" JOIN ").append(relation.getTable())
+                        .append(" ON ").append(queryRequest.getRequestBody().getRelations().get(0).getTable()).append(".userId = ")
+                        .append(relation.getTable()).append(".userId ");
+            }
+        }
+
+        // Handle WHERE clause
+        if (queryRequest.getRequestBody().getFilters() != null && !queryRequest.getRequestBody().getFilters().isEmpty()) {
+            sql.append(" WHERE ").append(String.join(" AND ", queryRequest.getRequestBody().getFilters()));
+        }
+
+        // Handle ORDER BY clause
+        if (queryRequest.getRequestBody().getOrderBy() != null && !queryRequest.getRequestBody().getOrderBy().isEmpty()) {
+            sql.append(" ORDER BY ").append(String.join(", ", queryRequest.getRequestBody().getOrderBy()));
+        }
+
+        // Handle GROUP BY clause
+        if (queryRequest.getRequestBody().isAggregateReport() && queryRequest.getRequestBody().getGroupBy() != null && !queryRequest.getRequestBody().getGroupBy().isEmpty()) {
+            sql.append(" GROUP BY ").append(String.join(", ", queryRequest.getRequestBody().getGroupBy()));
+        }
+
+        return sql.toString(); // Return the final SQL query
+    }
+
+
+    // Todo: use this validation
+    public void validatePayload(QueryRequestNew queryRequest) {
+        if (queryRequest.getRequestBody().getRelations() == null || queryRequest.getRequestBody().getRelations().isEmpty()) {
+            throw new IllegalArgumentException("Relations cannot be null or empty");
+        }
+
+        for (QueryRequestNew.Relation relation : queryRequest.getRequestBody().getRelations()) {
+            if (relation.getTable() == null || relation.getFields() == null || relation.getFields().isEmpty()) {
+                throw new IllegalArgumentException("Each relation must have a table and at least one field");
+            }
+        }
+
+        // Additional validation checks for filters, orderBy, etc.
+        if (queryRequest.getRequestBody().getFilters() == null || queryRequest.getRequestBody().getFilters().isEmpty()) {
+            throw new IllegalArgumentException("Filters cannot be null or empty");
+        }
+    }
+
+
 
 }
 

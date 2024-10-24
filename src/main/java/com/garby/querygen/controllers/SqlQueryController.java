@@ -14,10 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 @RestController
+@RequestMapping("/api/v1/query")
 public class SqlQueryController {
 
     private static final Logger logger = LoggerFactory.getLogger(SqlQueryController.class);
@@ -26,25 +28,17 @@ public class SqlQueryController {
     private final QueryService queryService;
     private final SqlQueryService sqlQueryService;
 
-    @Autowired       // used as there is more than one constructor
+    @Autowired       // used as there is more than one constructor param
     public SqlQueryController(QueryService queryService, SqlQueryService sqlQueryService) {
         this.queryService = queryService;
         this.sqlQueryService = sqlQueryService;
     }
 
-    @Operation(summary = "Process an SQL query request & returns the query. (query object logged)",
-            description = "Processes a SQL query request with options for table names and fields. Received request is logged as an object in the terminal/logs.",
-            responses = {@ApiResponse(responseCode = "200", description = "Query processed successfully")})
-    @PostMapping("/api/v1/process")
-    public ResponseEntity<String> processQuery(@RequestBody QueryRequest queryRequest) {
-        String sqlQuery = queryService.buildSqlQuery(queryRequest);  // Custom method to build SQL query
-        return ResponseEntity.ok(sqlQuery);  // Return the actual query instead of a success message
-    }
 
     @Operation(summary = "Process an SQL query request & return the query as output. (formatted query logged)",
             description = "Processes a SQL query request with options for table names and fields. Received request is formatted then logged for better readability in the terminal/logs.",
             responses = {@ApiResponse(responseCode = "200", description = "Query processed successfully")})
-    @PostMapping("/api/v1/sqlquery")
+    @PostMapping("/generate/1")
     public ResponseEntity<?> handleQuery(@RequestBody QueryRequest queryRequest) {
         try {
             // Convert the request object to JSON string for logging
@@ -80,7 +74,7 @@ public class SqlQueryController {
             description = "Processes a SQL query request with options for table names and fields. Formatted logging for both input and output.",
             responses = {@ApiResponse(responseCode = "200", description = "Query processed successfully")})
             // SELECT string FROM customer WHERE string ORDER BY string GROUP BY string
-    @PostMapping("/api/v1/sqlquery2")
+    @PostMapping("/generate/2")
     public ResponseEntity<?> handleQuery2(@RequestBody QueryRequest queryRequest) {
         try {
             // Convert the request object to JSON string for logging
@@ -122,21 +116,23 @@ public class SqlQueryController {
             }
             // SELECT string FROM string WHERE string ORDER BY transaction.transDate GROUP BY string LEFT JOIN string ON string.string = string.string
     )
-    @PostMapping("/api/v1/sqlquery3")
+    @PostMapping("/generate/3")
     public ResponseEntity<?> handleQuery3(@RequestBody QueryRequestNew queryRequest) {
         try {
-            String sqlQuery = sqlQueryService.processQuery(queryRequest);
-            return ResponseEntity.ok(sqlQuery);      // Return the constructed SQL query
-        } catch (JsonProcessingException e) {
-            logger.error("Error converting request to JSON: {}", e.getMessage());
-            return ResponseEntity.badRequest().body("Invalid request format");
-        } catch (IllegalArgumentException e) {
-            logger.error("Validation error: {}", e.getMessage());
+            // Validate the incoming request
+            sqlQueryService.validatePayload(queryRequest);
+            // Log the received payload in formatted JSON
+            logger.info("Received request: {}", new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(queryRequest));
+            // Generate and log the SQL query
+            String sqlQuery = sqlQueryService.generateSqlQuery(queryRequest);
+            // Log the final query
+            logger.info("Generated SQL Query: {}", sqlQuery);
+            return ResponseEntity.ok(sqlQuery);
+        } catch (IllegalArgumentException | JsonProcessingException e) {
+            logger.error("Error processing request: {}", e.getMessage());
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
-
 
 }
 

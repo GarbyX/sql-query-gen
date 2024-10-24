@@ -6,26 +6,6 @@ import java.util.ArrayList;
 
 public class QueryRequestNew {
 
-//    @Schema(description = "Whether the report should be aggregated or not")
-//    private boolean aggregateReport;
-//
-//    @Schema(description = "List of relations for the query")
-//    private List<Relation> relations = new ArrayList<>(); // Initialize to an empty list
-//
-//    @Schema(description = "List of aggregate functions")
-//    private List<AggregateFunction> aggregateFunctions;
-//
-//    @Schema(description = "List of filters to apply")
-//    private List<String> filters;
-//
-//    @Schema(description = "List of columns to order by", allowableValues = {"transaction.transDate", "customer.userId"})
-//    private List<String> orderBy;
-//
-//    @Schema(description = "List of columns to group by")
-//    private List<String> groupBy;
-
-    // private RequestBody requestBody; // Add RequestBody field
-
     private RequestBody requestBody;   // model class QueryRequest now includes a requestBody field and properly handles nested objects like defaultValueMapping.
 
     public RequestBody getRequestBody() {

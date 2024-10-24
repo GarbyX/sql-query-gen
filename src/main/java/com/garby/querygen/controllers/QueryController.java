@@ -1,7 +1,7 @@
 package com.garby.querygen.controllers;
 
     import com.garby.querygen.models.QueryRequest;
-    import com.garby.querygen.models.Relation;
+    import com.garby.querygen.services.SqlQueryService;
     import io.swagger.v3.oas.annotations.Operation;
     import io.swagger.v3.oas.annotations.media.Content;
     import io.swagger.v3.oas.annotations.media.Schema;
@@ -10,13 +10,18 @@ package com.garby.querygen.controllers;
     import org.springframework.http.ResponseEntity;
     import org.springframework.web.bind.annotation.*;
 
-    // import javax.management.relation.Relation;
     import java.util.HashMap;
     import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/query")
 public class QueryController {
+
+    private final SqlQueryService sqlqueryService;
+
+    public QueryController(SqlQueryService sqlqueryService) {
+        this.sqlqueryService = sqlqueryService;
+    }
 
     @Operation(
             summary = "Generate SQL query based on request body",
@@ -33,61 +38,25 @@ public class QueryController {
     public ResponseEntity<Map<String, String>> generateSQLQuery(@RequestBody QueryRequest request) {
         // Log the request object
         System.out.println("Received request: " + request);
-
+        // SQL Query generation logic based on the request body
         if (request.getRelations() == null || request.getRelations().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Relations cannot be null or empty"));
-        }  // SQL Query generation logic based on the request body
-
-        String sqlQuery = generateSQLFromRequest(request);
-
+        }
+        String sqlQuery =  sqlqueryService.generateSQLFromRequest(request);
         // Response map to hold the result
         Map<String, String> response = new HashMap<>();
         response.put("sql", sqlQuery);
-
         return ResponseEntity.ok(response);
     }
 
-    private String generateSQLFromRequest(QueryRequest request) {
-        // Base SQL Query
-        StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("SELECT ");
+    //    @Operation(summary = "Process an SQL query request & returns the query. (query object logged)",
+//            description = "Processes a SQL query request with options for table names and fields. Received request is logged as an object in the terminal/logs.",
+//            responses = {@ApiResponse(responseCode = "200", description = "Query processed successfully")})
+//    @PostMapping("/api/v1/process")
+//    public ResponseEntity<String> processQuery(@RequestBody QueryRequest queryRequest) {
+//        String sqlQuery = queryService.buildSqlQuery(queryRequest);  // Custom method to build SQL query
+//        return ResponseEntity.ok(sqlQuery);  // Return the actual query instead of a success message
+//    }
 
-        // Handle SELECT fields
-        request.getRelations().forEach(relation -> {
-            relation.getFields().forEach(field -> queryBuilder.append(relation.getTable()).append(".").append(field).append(", "));
-        });
 
-        // Remove last comma and space
-        queryBuilder.setLength(queryBuilder.length() - 2);
-
-        // Handle FROM and JOIN clauses
-        queryBuilder.append(" FROM ").append(request.getRelations().get(0).getTable()).append(" ");
-        for (int i = 1; i < request.getRelations().size(); i++) {
-            Relation relation = (Relation) request.getRelations().get(i);
-            queryBuilder.append(relation.getJoinType().toUpperCase())
-                    .append(" ")
-                    .append(relation.getTable())
-                    .append(" ON ")
-                    .append(request.getRelations().get(0).getTable())
-                    .append(".userId = ")
-                    .append(relation.getTable())
-                    .append(".userId ");
-        }
-
-        // Handle WHERE clause
-        queryBuilder.append("WHERE ");
-        request.getFilters().forEach(filter -> queryBuilder.append(filter).append(" IS NOT NULL AND "));
-
-        // Remove last 'AND'
-        queryBuilder.setLength(queryBuilder.length() - 4);
-
-        // Handle ORDER BY clause
-        queryBuilder.append(" ORDER BY ");
-        request.getOrderBy().forEach(orderField -> queryBuilder.append(orderField).append(", "));
-
-        // Remove last comma
-        queryBuilder.setLength(queryBuilder.length() - 2);
-
-        return queryBuilder.toString();
-    }
 }
