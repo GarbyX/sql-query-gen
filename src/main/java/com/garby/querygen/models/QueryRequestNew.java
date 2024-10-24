@@ -32,9 +32,8 @@ public class QueryRequestNew {
         private List<DefaultValueMapping> defaultValueMapping;
 
         // Constructor
-        // public QueryRequest() {
-        // Default constructor. Optionally initialize other fields
-    // }
+//         public QueryRequestNew() {
+//     }
 
     // Getters and Setters
 

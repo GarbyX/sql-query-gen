@@ -136,15 +136,14 @@ public class SqlQueryService {
         StringBuilder queryBuilder = new StringBuilder();
         queryBuilder.append("SELECT ");
         // Handle SELECT fields
-        request.getRelations().forEach(relation -> {
-            relation.getFields().forEach(field -> queryBuilder.append(relation.getTable()).append(".").append(field).append(", "));
-        });
+        // Statement lambda replaced with expression lambda
+        request.getRelations().forEach(relation -> relation.getFields().forEach(field -> queryBuilder.append(relation.getTable()).append(".").append(field).append(", ")));
         // Remove last comma and space
         queryBuilder.setLength(queryBuilder.length() - 2);
         // Handle FROM and JOIN clauses
         queryBuilder.append(" FROM ").append(request.getRelations().get(0).getTable()).append(" ");
         for (int i = 1; i < request.getRelations().size(); i++) {
-            Relation relation = (Relation) request.getRelations().get(i);
+            Relation relation = request.getRelations().get(i);
             queryBuilder.append(relation.getJoinType().toUpperCase())
                     .append(" ")
                     .append(relation.getTable())
@@ -172,49 +171,52 @@ public class SqlQueryService {
 
     public String generateSqlQuery(QueryRequestNew queryRequest) {
         StringBuilder sql = new StringBuilder();
+        boolean aggregateReport = queryRequest.getRequestBody().isAggregateReport();
 
-        // Start building the SQL query
+        // Start the SELECT statement
         sql.append("SELECT ");
 
-        // Add fields from relations
+        // Handle fields for SELECT
         boolean firstField = true;
         for (QueryRequestNew.Relation relation : queryRequest.getRequestBody().getRelations()) {
-            if (!firstField) {
-                sql.append(", ");
+            for (String field : relation.getFields()) {
+                if (!firstField) {
+                    sql.append(", ");
+                }
+                sql.append(field);
+                firstField = false;
             }
-            sql.append(String.join(", ", relation.getFields()));
-            firstField = false;
         }
 
-        // FROM clause with the first table
+        // Add the FROM clause (main table)
         sql.append(" FROM ").append(queryRequest.getRequestBody().getRelations().get(0).getTable());
 
-        // Handle optional JOIN clauses
+        // Handle JOINs based on relations
         for (int i = 1; i < queryRequest.getRequestBody().getRelations().size(); i++) {
             QueryRequestNew.Relation relation = queryRequest.getRequestBody().getRelations().get(i);
             if (relation.getJoinType() != null && !relation.getJoinType().isEmpty()) {
-                sql.append(" ").append(relation.getJoinType()).append(" JOIN ").append(relation.getTable())
-                        .append(" ON ").append(queryRequest.getRequestBody().getRelations().get(0).getTable()).append(".userId = ")
-                        .append(relation.getTable()).append(".userId ");
+                sql.append(" ").append(relation.getJoinType()).append(" JOIN ")
+                        .append(relation.getTable()).append(" ON ecardb.userdb = ").append(relation.getTable()).append(".user");
             }
         }
 
-        // Handle WHERE clause
+        // Add WHERE clause if there are filters
         if (queryRequest.getRequestBody().getFilters() != null && !queryRequest.getRequestBody().getFilters().isEmpty()) {
             sql.append(" WHERE ").append(String.join(" AND ", queryRequest.getRequestBody().getFilters()));
         }
 
-        // Handle ORDER BY clause
+        // Add GROUP BY clause (only if aggregateReport is true)
+        if (aggregateReport && queryRequest.getRequestBody().getGroupBy() != null && !queryRequest.getRequestBody().getGroupBy().isEmpty()) {
+            sql.append(" GROUP BY ").append(String.join(", ", queryRequest.getRequestBody().getGroupBy()));
+        }
+
+        // Add ORDER BY clause
         if (queryRequest.getRequestBody().getOrderBy() != null && !queryRequest.getRequestBody().getOrderBy().isEmpty()) {
             sql.append(" ORDER BY ").append(String.join(", ", queryRequest.getRequestBody().getOrderBy()));
         }
 
-        // Handle GROUP BY clause
-        if (queryRequest.getRequestBody().isAggregateReport() && queryRequest.getRequestBody().getGroupBy() != null && !queryRequest.getRequestBody().getGroupBy().isEmpty()) {
-            sql.append(" GROUP BY ").append(String.join(", ", queryRequest.getRequestBody().getGroupBy()));
-        }
-
-        return sql.toString(); // Return the final SQL query
+        sql.append(";");  // End the query with a semicolon
+        return sql.toString();
     }
 
 
@@ -230,9 +232,8 @@ public class SqlQueryService {
             }
         }
 
-        // Additional validation checks for filters, orderBy, etc.
-        if (queryRequest.getRequestBody().getFilters() == null || queryRequest.getRequestBody().getFilters().isEmpty()) {
-            throw new IllegalArgumentException("Filters cannot be null or empty");
+        if (queryRequest.getRequestBody().isAggregateReport() && (queryRequest.getRequestBody().getGroupBy() == null || queryRequest.getRequestBody().getGroupBy().isEmpty())) {
+            throw new IllegalArgumentException("GroupBy is required when aggregateReport is true");
         }
     }
 

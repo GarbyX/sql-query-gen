@@ -5,7 +5,7 @@ import java.util.List;
 
 public class QueryRequest {
     private boolean aggregateReport;
-    private List<Relation> relations = new ArrayList<>(); // Initialize to an empty list;
+    private List<Relation> relations = new ArrayList<>();    // Initialize to an empty list;
     private List<AggregateFunction> aggregateFunctions;
     private List<String> filters;
     private List<String> orderBy;
@@ -13,7 +13,6 @@ public class QueryRequest {
 
     // Constructor
     public QueryRequest() {
-        // Default constructor. Optionally initialize other fields
     }
 
     // Getters and Setters
@@ -27,7 +26,7 @@ public class QueryRequest {
     }
 
     public List<Relation> getRelations() {
-        return relations;    // This will return an empty list instead of null
+        return relations;    // returns an empty list instead of null
     }
 
     public void setRelations(List<Relation> relations) {
